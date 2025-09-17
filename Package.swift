@@ -607,6 +607,7 @@ let package = Package(
         ),
         .library(
             name: "GoogleAPIClientForREST_Drive",
+            type: .dynamic,
             targets: ["GoogleAPIClientForREST_Drive"]
         ),
         .library(
