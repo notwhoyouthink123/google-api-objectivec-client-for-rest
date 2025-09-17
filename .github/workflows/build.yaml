@@ -1,0 +1,72 @@
+name: Build & Release GoogleAPIClientForREST_Drive.xcframework
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+
+
+      - name: Archive for iOS Device
+        run: |
+          xcodebuild archive \
+            -scheme GoogleAPIClientForREST_Drive \
+            -destination "generic/platform=iOS" \
+            -archivePath ./build/ios_devices.xcarchive \
+
+      - name: Archive for iOS Simulator
+        run: |
+          xcodebuild archive \
+            -scheme GoogleAPIClientForREST_Drive \
+            -destination "generic/platform=iOS Simulator" \
+            -archivePath ./build/ios_simulator.xcarchive \
+
+      - name: Debug device archive
+        run: ls -R ./build/ios_devices.xcarchive/Products
+
+      - name: Debug simulator archive
+        run: ls -R ./build/ios_simulator.xcarchive/Products
+
+      - name: Create XCFramework
+        run: |
+          xcodebuild -create-xcframework \
+            -framework ./build/ios_devices.xcarchive/Products/usr/local/lib/GoogleAPIClientForREST_Drive.framework \
+            -framework ./build/ios_simulator.xcarchive/Products/usr/local/lib/GoogleAPIClientForREST_Drive.framework \
+            -output ./GoogleAPIClientForREST_Drive.xcframework
+
+      - name: Zip XCFramework
+        run: zip -r GoogleAPIClientForREST_Drive.xcframework.zip GoogleAPIClientForREST_Drive.xcframework
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoogleAPIClientForREST_Drive.xcframework
+          path: GoogleAPIClientForREST_Drive.xcframework.zip
+
+  release:
+    needs: build
+    runs-on: macos-15
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: GoogleAPIClientForREST_Drive.xcframework
+          path: .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: GoogleAPIClientForREST_Drive.xcframework.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
